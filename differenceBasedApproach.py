@@ -36,6 +36,7 @@ def simulateAlgo(data, N_longTerm, N_shortTerm, SELL_THRESHOLD):
         appendedActions    = np.append(appendedActions,action)
 
         #take actions
+        #print(action)
         if (action == 1): #BUY
             currentStocks = 1
             lastActionIt  = it
@@ -52,8 +53,17 @@ def simulateAlgo(data, N_longTerm, N_shortTerm, SELL_THRESHOLD):
                 N_gainedMoney += 1
             else:
                 if printTimestepsWhereAlgoMessedUp:
-                    print("Bad Behavior from ", Buy_it, " to ", it)
+                    print("Bad Behavior from ", Buy_it, " to ", it, " delta ", Sell_Price - Buy_Price)
         portfolioValue = np.append(portfolioValue, cash+currentStocks*data[it])
+
+    if currentStocks == 1:
+        Sell_Price = cash + (data[it]- costPerTransaction)
+        N_transactions +=1
+        if Sell_Price > Buy_Price:
+            N_gainedMoney += 1
+        else:
+            if printTimestepsWhereAlgoMessedUp:
+                print("Bad Behavior from ", Buy_it, " to ", it, " delta ", Sell_Price - Buy_Price)
 
     if N_transactions > 0:
         madeMoneyPercentage = N_gainedMoney / N_transactions * 100
@@ -133,10 +143,10 @@ def dynamicThreshold(dataPointsSinceBuyNorm, lastLongTrendValuesNorm, currentSto
     return action
 
 def optimizeForPercentage(data, N_length):
-    N_shortTerm = 2
+    N_shortTerm = 3
     shortTermFrames= np.linspace(1,    N_shortTerm, N_shortTerm, dtype = np.int64)
     longTermFrames = np.linspace(3,    40,N_length, dtype = np.int64)
-    sell_threshold = np.linspace(5.00, 15, N_length)
+    sell_threshold = np.linspace(0.00, 15, N_length)
     z_grid         = np.zeros((N_shortTerm,N_length,N_length))
     percentages    = np.zeros((N_shortTerm,N_length,N_length))
     for i in range(N_shortTerm):
