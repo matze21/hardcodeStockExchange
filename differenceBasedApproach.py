@@ -3,7 +3,7 @@ import time
 
 costPerTransaction              = 0.0
 visualDebugging                 = False
-printTimestepsWhereAlgoMessedUp = True
+printTimestepsWhereAlgoMessedUp = False
 
 if visualDebugging:
     import matplotlib.pyplot as plt
@@ -71,7 +71,8 @@ def simulateAlgo(data, N_longTerm, N_shortTerm, SELL_THRESHOLD):
         madeMoneyPercentage = 0
     finalValue = cash + (data[it]*currentStocks)
     gain       = finalValue - initialCapital
-    print("stock difference vs. money made", data[it]-data[0], " vs.", finalValue-initialCapital)
+    if visualDebugging:
+        print("stock difference vs. money made", data[it]-data[0], " vs.", finalValue-initialCapital)
     efficiency = (finalValue - initialCapital) / (data[it] - data[N_longTerm-1])
     return gain, appendedActions, portfolioValue, madeMoneyPercentage, efficiency
 
@@ -88,7 +89,7 @@ def dynamicThreshold(dataPointsSinceBuyNorm, lastLongTrendValuesNorm, currentSto
     averageDelta = accumulatedDeltas / i
 
     #check if stock is changing a lot, but the average value is staying relatively constant - lot of noise!
-    isNoisy = abs(deltaStartEnd) < averageDelta
+    isNoisy = abs(deltaStartEnd) < averageDelta * 3
 
     #get delta of the last couple time points = detection if rise is happening
     isRising         = True
@@ -99,19 +100,24 @@ def dynamicThreshold(dataPointsSinceBuyNorm, lastLongTrendValuesNorm, currentSto
         isRising  = isRising and delta > 0
         isFalling = isFalling and delta < 0
 
+    # for falling only the last delta is important
+    isFalling = isFalling or curDelta < 0
+
     isChangeSignificant = abs(lastLongTrendValuesNorm[N_longTerm - 1] - lastLongTrendValuesNorm[N_longTerm -1 - N_trendDetection]) > averageDelta
 
     #check if we made money since the buy, if no, just sell if fall is significant ~10%
     N_sinceBuy    = dataPointsSinceBuyNorm.shape[0]
     deltaSinceBuy = 1.0
     if N_sinceBuy > 0:
-        deltaSinceBuy   = dataPointsSinceBuyNorm[N_sinceBuy-1] - dataPointsSinceBuyNorm[0]
-        deltaInPercent  = deltaSinceBuy /  dataPointsSinceBuyNorm[0] * 100
-        if (deltaInPercent < -SELL_THRESHOLD):
+        #use the highest value to determine how much we've been loosing
+        highestValueNorm      = max(dataPointsSinceBuyNorm)
+        deltaSinceBuy         = dataPointsSinceBuyNorm[N_sinceBuy-1] - dataPointsSinceBuyNorm[0]
+        deltaMaxValuePercent  = (dataPointsSinceBuyNorm[N_sinceBuy-1] - highestValueNorm) /  highestValueNorm * 100
+        if (deltaMaxValuePercent < -SELL_THRESHOLD):# or (deltaStartEnd<0):
             deltaSinceBuy = 1.0
 
-    should_buy = not isNoisy and isChangeSignificant and isRising and deltaStartEnd > 0
-    should_sell = isChangeSignificant and isFalling and deltaSinceBuy > 0
+    should_buy = not isNoisy and isChangeSignificant and isRising #and deltaStartEnd > 0
+    should_sell = isFalling and deltaSinceBuy > 0 #and isChangeSignificant
 
     #define action
     action = 0
@@ -171,3 +177,29 @@ def optimizeForPercentage(data, N_length):
     print("percentage best sell threshold ", sell_threshold[result[2]])
     #plot_graphs.plot2ParameterSpectrum(sigma,longTermFrames,z_grid, "sigma", "long term frames used")
     #print("best result indixes = ", result[0], result[1], result[2])
+
+def optimizeForMoneyMade(data, N_length):
+    N_shortTerm = 10
+    shortTermFrames= np.linspace(1,    N_shortTerm, N_shortTerm, dtype = np.int64)
+    longTermFrames = np.linspace(N_shortTerm,    40,N_length, dtype = np.int64)
+    sell_threshold = np.linspace(0.00, 15, N_length)
+    z_grid         = np.zeros((N_shortTerm,N_length,N_length))
+    percentages    = np.zeros((N_shortTerm,N_length,N_length))
+    for i in range(N_shortTerm):
+        for j in range(N_length):
+            for k in range(N_length):
+                z_grid[i][j][k], appendActions, currentCapital, percentages[i][j][k], efficiency =simulateAlgo(data, longTermFrames[j], shortTermFrames[i], sell_threshold[k])
+                toc = time.time()
+    #print("results = ", z_grid)
+    result = np.where(z_grid == np.max(z_grid))
+    print("best result ", z_grid[result])
+    print("best short Term ", shortTermFrames[result[0]])
+    print("best long Term frame ", longTermFrames[result[1]])
+    print("best sell threshold ", sell_threshold[result[2]])
+
+    #print("percentage results = ", percentages)
+    # result = np.where(percentages == np.max(percentages))
+    # print("percentage best result ", percentages[result])
+    # print("percentage best short Term ", shortTermFrames[result[0]])
+    # print("percentage best long Term frame ", longTermFrames[result[1]])
+    # print("percentage best sell threshold ", sell_threshold[result[2]])

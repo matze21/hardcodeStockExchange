@@ -15,12 +15,19 @@ beyond_meat = pd.read_csv('data/US1.BYND_190513_201011.csv')
 #tesla = pd.read_csv('Tesla_2020_09_01_2020_09_07.csv')
 data  = tesla['Close']#[1200:1500]
 
-data = beyond_meat['<CLOSE>'][1000:2028]
+data = beyond_meat['<CLOSE>']#[100000:120000]
 data = data.to_numpy()
 
+optimization = False
+kpis = True
+KPI_optimization = True
+
+longTermFrames = 21
+shotTermFrames = 3
+sellPercentage = 3.3
 
 tic = time.time()
-moneyMade, appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(data, 12, 1, 7.5)  #10 long term, 3 short term, 10% sell threshold
+moneyMade, appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(data, longTermFrames, shotTermFrames, sellPercentage)  #10 long term, 3 short term, 10% sell threshold
 toc = time.time()
 print("simulation time", toc - tic)
 print("money Made", moneyMade, "     efficiency ", efficiency)
@@ -29,8 +36,37 @@ print("percentage Money made", madeMoneyPercentage)
 #plot results
 plot_graphs.plotAlgoResults(data, appendActions, portfolioValue)
 
-#optimize for parameters
-tic = time.time()
-differenceBasedApproach.optimizeForPercentage(data, 5)
-toc = time.time()
-print(toc-tic)
+if kpis:
+    dataKPI = beyond_meat['<CLOSE>']
+    dataKPI = dataKPI.to_numpy()
+    testCase_slowDecline      = dataKPI[1000:2600]
+    testCase_bigRiseBigDrop   = dataKPI[7000:8000]
+    testCase_steadyDecrease   = dataKPI[37000:44000]
+    testCase_increaseWithDrop = dataKPI[18000:20500]
+    testCase_noisyIncrease    = dataKPI[100000:120000]
+
+    moneyMadeSlowDecline,    appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(testCase_slowDecline,      longTermFrames, shotTermFrames, sellPercentage)
+    moneyMadeBigRiseBigDrop, appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(testCase_bigRiseBigDrop,   longTermFrames, shotTermFrames, sellPercentage)
+    moneyMadeSteadyDecrease, appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(testCase_steadyDecrease,   longTermFrames, shotTermFrames, sellPercentage)
+    moneyMadeIncreaseWDrop,  appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(testCase_increaseWithDrop, longTermFrames, shotTermFrames, sellPercentage)
+    moneyMadeNoisyInrease,   appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(testCase_noisyIncrease,    longTermFrames, shotTermFrames, sellPercentage)
+
+    print("moneyMadeSlowDecline   ", moneyMadeSlowDecline, " vs Data Delta ", testCase_slowDecline[len(testCase_slowDecline)-1] - testCase_slowDecline[0])
+    print("moneyMadeBigRiseBigDrop", moneyMadeBigRiseBigDrop, " vs Data Delta ", testCase_bigRiseBigDrop[len(testCase_bigRiseBigDrop)-1] - testCase_bigRiseBigDrop[0])
+    print("moneyMadeSteadyDecrease", moneyMadeSteadyDecrease, " vs Data Delta ", testCase_steadyDecrease[len(testCase_steadyDecrease)-1] - testCase_steadyDecrease[0])
+    print("moneyMadeIncreaseWDrop ", moneyMadeIncreaseWDrop, " vs Data Delta ", testCase_increaseWithDrop[len(testCase_increaseWithDrop)-1] - testCase_increaseWithDrop[0])
+    print("moneyMadeNoisyInrease  ", moneyMadeNoisyInrease, " vs Data Delta ", testCase_noisyIncrease[len(testCase_noisyIncrease)-1] - testCase_noisyIncrease[0])
+
+    if KPI_optimization:
+        differenceBasedApproach.optimizeForMoneyMade(testCase_slowDecline, 15)
+        differenceBasedApproach.optimizeForMoneyMade(testCase_bigRiseBigDrop, 15)
+        differenceBasedApproach.optimizeForMoneyMade(testCase_steadyDecrease, 15)
+        differenceBasedApproach.optimizeForMoneyMade(testCase_increaseWithDrop, 15)
+        differenceBasedApproach.optimizeForMoneyMade(testCase_noisyIncrease, 15)
+
+if optimization:
+    #optimize for parameters
+    tic = time.time()
+    differenceBasedApproach.optimizeForPercentage(data, 5)
+    toc = time.time()
+    print(toc-tic)
