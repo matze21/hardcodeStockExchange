@@ -18,23 +18,25 @@ data  = tesla['Close']#[1200:1500]
 data = beyond_meat['<CLOSE>']#[100000:120000]
 data = data.to_numpy()
 
+plotData = False
 optimization = False
 kpis = True
 KPI_optimization = True
 
-longTermFrames = 21
-shotTermFrames = 3
-sellPercentage = 3.3
+longTermFrames = 51
+shotTermFrames = 4
+sellPercentage = 1.3
 
-tic = time.time()
-moneyMade, appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(data, longTermFrames, shotTermFrames, sellPercentage)  #10 long term, 3 short term, 10% sell threshold
-toc = time.time()
-print("simulation time", toc - tic)
-print("money Made", moneyMade, "     efficiency ", efficiency)
-print("percentage Money made", madeMoneyPercentage)
+if plotData:
+    tic = time.time()
+    moneyMade, appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(data, longTermFrames, shotTermFrames, sellPercentage)  #10 long term, 3 short term, 10% sell threshold
+    toc = time.time()
+    print("simulation time", toc - tic)
+    print("money Made", moneyMade, "     efficiency ", efficiency)
+    print("percentage Money made", madeMoneyPercentage)
 
-#plot results
-plot_graphs.plotAlgoResults(data, appendActions, portfolioValue)
+    #plot results
+    plot_graphs.plotAlgoResults(data, appendActions, portfolioValue)
 
 if kpis:
     dataKPI = beyond_meat['<CLOSE>']
@@ -46,10 +48,15 @@ if kpis:
     testCase_noisyIncrease    = dataKPI[100000:120000]
 
     moneyMadeSlowDecline,    appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(testCase_slowDecline,      longTermFrames, shotTermFrames, sellPercentage)
+    plot_graphs.plotAlgoResults(testCase_slowDecline, appendActions, portfolioValue)
     moneyMadeBigRiseBigDrop, appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(testCase_bigRiseBigDrop,   longTermFrames, shotTermFrames, sellPercentage)
+    plot_graphs.plotAlgoResults(testCase_bigRiseBigDrop, appendActions, portfolioValue)
     moneyMadeSteadyDecrease, appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(testCase_steadyDecrease,   longTermFrames, shotTermFrames, sellPercentage)
+    plot_graphs.plotAlgoResults(testCase_steadyDecrease, appendActions, portfolioValue)
     moneyMadeIncreaseWDrop,  appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(testCase_increaseWithDrop, longTermFrames, shotTermFrames, sellPercentage)
+    plot_graphs.plotAlgoResults(testCase_increaseWithDrop, appendActions, portfolioValue)
     moneyMadeNoisyInrease,   appendActions, portfolioValue, madeMoneyPercentage, efficiency = differenceBasedApproach.simulateAlgo(testCase_noisyIncrease,    longTermFrames, shotTermFrames, sellPercentage)
+    plot_graphs.plotAlgoResults(testCase_noisyIncrease, appendActions, portfolioValue)
 
     print("moneyMadeSlowDecline   ", moneyMadeSlowDecline, " vs Data Delta ", testCase_slowDecline[len(testCase_slowDecline)-1] - testCase_slowDecline[0])
     print("moneyMadeBigRiseBigDrop", moneyMadeBigRiseBigDrop, " vs Data Delta ", testCase_bigRiseBigDrop[len(testCase_bigRiseBigDrop)-1] - testCase_bigRiseBigDrop[0])
@@ -58,11 +65,12 @@ if kpis:
     print("moneyMadeNoisyInrease  ", moneyMadeNoisyInrease, " vs Data Delta ", testCase_noisyIncrease[len(testCase_noisyIncrease)-1] - testCase_noisyIncrease[0])
 
     if KPI_optimization:
-        differenceBasedApproach.optimizeForMoneyMade(testCase_slowDecline, 15)
-        differenceBasedApproach.optimizeForMoneyMade(testCase_bigRiseBigDrop, 15)
-        differenceBasedApproach.optimizeForMoneyMade(testCase_steadyDecrease, 15)
-        differenceBasedApproach.optimizeForMoneyMade(testCase_increaseWithDrop, 15)
-        differenceBasedApproach.optimizeForMoneyMade(testCase_noisyIncrease, 15)
+        N_iterations = 5
+        differenceBasedApproach.optimizeForMoneyMade(testCase_slowDecline, N_iterations)
+        differenceBasedApproach.optimizeForMoneyMade(testCase_bigRiseBigDrop, N_iterations)
+        differenceBasedApproach.optimizeForMoneyMade(testCase_steadyDecrease, N_iterations)
+        differenceBasedApproach.optimizeForMoneyMade(testCase_increaseWithDrop, N_iterations)
+        differenceBasedApproach.optimizeForMoneyMade(testCase_noisyIncrease, N_iterations)
 
 if optimization:
     #optimize for parameters

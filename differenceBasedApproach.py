@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import plot_graphs
 
 costPerTransaction              = 0.0
 visualDebugging                 = False
@@ -80,6 +81,7 @@ def simulateAlgo(data, N_longTerm, N_shortTerm, SELL_THRESHOLD):
 #lastLongTrendValues needs to be greater than 2
 def dynamicThreshold(dataPointsSinceBuyNorm, lastLongTrendValuesNorm, currentStocks, N_trendDetection, SELL_THRESHOLD):
     # look at the last changes of the stock
+    Sigma = 3
     N_longTerm         = lastLongTrendValuesNorm.shape[0]
     accumulatedDeltas  = 0
     curDelta           = lastLongTrendValuesNorm[N_longTerm-1] - lastLongTrendValuesNorm[N_longTerm-2]
@@ -89,7 +91,7 @@ def dynamicThreshold(dataPointsSinceBuyNorm, lastLongTrendValuesNorm, currentSto
     averageDelta = accumulatedDeltas / i
 
     #check if stock is changing a lot, but the average value is staying relatively constant - lot of noise!
-    isNoisy = abs(deltaStartEnd) < averageDelta * 3
+    isNoisy = abs(deltaStartEnd) < averageDelta * Sigma
 
     #get delta of the last couple time points = detection if rise is happening
     isRising         = True
@@ -103,7 +105,7 @@ def dynamicThreshold(dataPointsSinceBuyNorm, lastLongTrendValuesNorm, currentSto
     # for falling only the last delta is important
     isFalling = isFalling or curDelta < 0
 
-    isChangeSignificant = abs(lastLongTrendValuesNorm[N_longTerm - 1] - lastLongTrendValuesNorm[N_longTerm -1 - N_trendDetection]) > averageDelta
+    isChangeSignificant = abs(lastLongTrendValuesNorm[N_longTerm - 1] - lastLongTrendValuesNorm[N_longTerm -1 - N_trendDetection]) > averageDelta * Sigma
 
     #check if we made money since the buy, if no, just sell if fall is significant ~10%
     N_sinceBuy    = dataPointsSinceBuyNorm.shape[0]
@@ -144,7 +146,7 @@ def dynamicThreshold(dataPointsSinceBuyNorm, lastLongTrendValuesNorm, currentSto
             if N_sinceBuy > 0:
                 timeSinceBuy = np.linspace(0, N_sinceBuy-1, N_sinceBuy)
                 ax2.plot(timeSinceBuy, dataPointsSinceBuyNorm)
-                print("deltaSinceBuy", deltaInPercent, "%")
+                print("deltaSinceBuy", deltaMaxValuePercent, "%")
             plt.show()
     return action
 
@@ -181,7 +183,7 @@ def optimizeForPercentage(data, N_length):
 def optimizeForMoneyMade(data, N_length):
     N_shortTerm = 10
     shortTermFrames= np.linspace(1,    N_shortTerm, N_shortTerm, dtype = np.int64)
-    longTermFrames = np.linspace(N_shortTerm,    40,N_length, dtype = np.int64)
+    longTermFrames = np.linspace(N_shortTerm,    60,N_length, dtype = np.int64)
     sell_threshold = np.linspace(0.00, 15, N_length)
     z_grid         = np.zeros((N_shortTerm,N_length,N_length))
     percentages    = np.zeros((N_shortTerm,N_length,N_length))
@@ -192,10 +194,14 @@ def optimizeForMoneyMade(data, N_length):
                 toc = time.time()
     #print("results = ", z_grid)
     result = np.where(z_grid == np.max(z_grid))
-    print("best result ", z_grid[result])
-    print("best short Term ", shortTermFrames[result[0]])
+    print("------------------------------------------------")
+    print("best result          ", z_grid[result])
+    print("best short Term      ", shortTermFrames[result[0]])
     print("best long Term frame ", longTermFrames[result[1]])
-    print("best sell threshold ", sell_threshold[result[2]])
+    print("best sell threshold  ", sell_threshold[result[2]])
+
+    moneyMade, appendActions, currentCapital, percentage, efficiency =simulateAlgo(data, longTermFrames[result[1]][0], shortTermFrames[result[0]][0], sell_threshold[result[2]][0])
+    plot_graphs.plotAlgoResults(data, appendActions, currentCapital)
 
     #print("percentage results = ", percentages)
     # result = np.where(percentages == np.max(percentages))
