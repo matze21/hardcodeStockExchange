@@ -72,7 +72,7 @@ def simulateAlgo(data, N_longTerm, N_shortTerm, SELL_THRESHOLD):
         madeMoneyPercentage = 0
     finalValue = cash + (data[it]*currentStocks)
     gain       = finalValue - initialCapital
-    if visualDebugging:
+    if printTimestepsWhereAlgoMessedUp:
         print("stock difference vs. money made", data[it]-data[0], " vs.", finalValue-initialCapital)
     efficiency = (finalValue - initialCapital) / (data[it] - data[N_longTerm-1])
     return gain, appendedActions, portfolioValue, madeMoneyPercentage, efficiency
@@ -81,7 +81,7 @@ def simulateAlgo(data, N_longTerm, N_shortTerm, SELL_THRESHOLD):
 #lastLongTrendValues needs to be greater than 2
 def dynamicThreshold(dataPointsSinceBuyNorm, lastLongTrendValuesNorm, currentStocks, N_trendDetection, SELL_THRESHOLD):
     # look at the last changes of the stock
-    Sigma = 3
+    Sigma = 5
     N_longTerm         = lastLongTrendValuesNorm.shape[0]
     accumulatedDeltas  = 0
     curDelta           = lastLongTrendValuesNorm[N_longTerm-1] - lastLongTrendValuesNorm[N_longTerm-2]
